@@ -186,9 +186,3 @@ class Net(nn.Module):
         x = self.linear_layers(x)
         return x[0][0]
 
-
-# In[ ]:
-
-
-
-
