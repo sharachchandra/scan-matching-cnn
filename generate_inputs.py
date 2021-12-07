@@ -110,7 +110,7 @@ class TrajectoryDataset(Dataset):
             l = l + 1
         idx_map = np.cumsum(idx_map)
         
-        self.idx_map = np.cumsum(idx_map)
+        self.idx_map = idx_map
         self.rel_pose_idx_map = rel_pose_idx_map
         self.rel_pose_map = rel_pose_map
         self.root_dir = root_dir
@@ -128,7 +128,7 @@ class TrajectoryDataset(Dataset):
 
         outer_idx = np.argmax(self.idx_map > idx)
         if outer_idx > 0:
-            ij = idx - self.rel_pose_idx_map[outer_idx - 1][-1]
+            ij = idx - self.idx_map[outer_idx - 1]
             inner_idx = np.argmax(self.rel_pose_idx_map[outer_idx] > ij)
         else:
             ij = idx
@@ -138,9 +138,10 @@ class TrajectoryDataset(Dataset):
         if i > 0:
             j = ij - self.rel_pose_idx_map[outer_idx][i - 1] + i + 1
         else:
-            j = j = ij + i + 1
+            j = ij + i + 1
         
         dir = self.root_dir + 'traj_' + str(self.traj_num_list[outer_idx]) + '/'
+        
         image1 = cv2.imread(dir + 'img_' + str(i) + '.jpg', 0)/255
         image2 = cv2.imread(dir + 'img_' + str(j) + '.jpg', 0)/255
         rel_pose = self.rel_pose_map[outer_idx][ij]
@@ -148,6 +149,7 @@ class TrajectoryDataset(Dataset):
         sample = {'image1': image1, 'image2': image2, 'rel_pose': rel_pose}
 
         return sample
+
 
 #---------------------------------------------------------------------------------------------------------#
 class Net(nn.Module):
