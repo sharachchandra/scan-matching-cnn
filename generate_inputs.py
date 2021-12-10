@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import cv2
@@ -152,6 +152,106 @@ class TrajectoryDataset(Dataset):
 
 
 #---------------------------------------------------------------------------------------------------------#
+class TrajectoryLoad(Dataset):
+
+    def __init__(self, root_dir, traj_num:int = 2, skip_interval:int = 0):
+        dir = root_dir + 'traj_' + str(traj_num) + '/'
+        print(traj_num)
+        pose_list = pandas.read_csv(dir + 'pose_list.csv', header=None).values
+        
+        self.n = skip_interval + 1
+        self.N = len(pose_list)
+        self.M = (self.N - 1)//self.n
+        self.start_pose = pose_list[0]
+        self.pose_list = pose_list
+        self.root_dir = root_dir
+        self.traj_num = traj_num
+
+    def __len__(self):
+        return self.M
+
+    def getStartPose(self):
+        return self.start_pose
+        
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+            
+        if idx >= len(self) or idx < 0:
+            print('Larger than bound')
+        
+        i = idx*self.n
+        j = i + self.n
+        
+        dir = self.root_dir + 'traj_' + str(self.traj_num) + '/'
+        image1 = cv2.imread(dir + 'img_' + str(i) + '.jpg', 0)/255
+        image2 = cv2.imread(dir + 'img_' + str(j) + '.jpg', 0)/255
+        rel_pose = RelativePose(self.pose_list[i], self.pose_list[j])
+        
+        sample = {'image1': image1, 'image2': image2, 'rel_pose': rel_pose}
+
+        return sample
+    
+#---------------------------------------------------------------------------------------------------------#
+class TrajectoryLoad2(Dataset):
+
+    def __init__(self, root_dir, traj_num:int = 2, max_num_pose:int = 1, min_dis = 0.5,                  min_ang = math.radians(10)):
+        dir = root_dir + 'traj_' + str(traj_num) + '/'
+        print(traj_num)
+        pose_list = pandas.read_csv(dir + 'pose_list.csv', header=None).values
+        
+        N = len(pose_list)
+        indices = []
+        i = 0
+        indices.append(i)
+        while 1:
+            num_poses = 0
+            for j in range(i+1, N, 1):
+                rel_pose = RelativePose(pose_list[i], pose_list[j])
+                dis = np.sqrt(rel_pose[0]*rel_pose[0] + rel_pose[1]*rel_pose[1])
+                ang = rel_pose[2]
+
+                if dis >= min_dis or ang >= min_ang or (j - i) >= max_num_pose:
+                    indices.append(j)
+                    break
+            i = j
+            if i > N-2:
+                break
+        indices = np.asarray(indices)
+        print(indices)
+            
+        self.indices = indices
+        self.M = len(indices) - 1
+        self.start_pose = pose_list[0]
+        self.pose_list = pose_list
+        self.root_dir = root_dir
+        self.traj_num = traj_num
+
+    def __len__(self):
+        return self.M
+
+    def getStartPose(self):
+        return self.start_pose
+        
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+            
+        if idx >= len(self) or idx < 0:
+            print('Larger than bound')
+        
+        i = self.indices[idx]
+        j = self.indices[idx + 1]
+        
+        dir = self.root_dir + 'traj_' + str(self.traj_num) + '/'
+        image1 = cv2.imread(dir + 'img_' + str(i) + '.jpg', 0)/255
+        image2 = cv2.imread(dir + 'img_' + str(j) + '.jpg', 0)/255
+        rel_pose = RelativePose(self.pose_list[i], self.pose_list[j])
+        
+        sample = {'image1': image1, 'image2': image2, 'rel_pose': rel_pose}
+
+        return sample
+#---------------------------------------------------------------------------------------------------------#
 class Net(nn.Module):
     #Architecture is LeNet modification
     def __init__(self):
@@ -187,4 +287,10 @@ class Net(nn.Module):
         x = torch.flatten(x, 1)
         x = self.linear_layers(x)
         return x[0][0]
+
+
+# In[ ]:
+
+
+
 
