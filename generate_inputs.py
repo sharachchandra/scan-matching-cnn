@@ -253,7 +253,7 @@ class TrajectoryLoad2(Dataset):
         return sample
 #---------------------------------------------------------------------------------------------------------#
 class Net(nn.Module):
-    #Architecture is LeNet modification
+    #Architecture is ResNet modification
     def __init__(self):
         super(Net, self).__init__()
         self.conv_layers = nn.Sequential(
